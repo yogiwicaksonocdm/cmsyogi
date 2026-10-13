@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simple CMS Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-50 font-sans">
+    <div class="max-w-4xl mx-auto p-6">
+        <header class="flex justify-between items-center mb-8 border-b pb-4">
+            <h1 class="text-2xl font-bold text-gray-800">Simple CMS Dashboard</h1>
+            <a href="/edit.html" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition">+ Tambah Konten</a>
+        </header>
+
+        <div id="loading" class="text-center py-10 text-gray-500">Memuat data...</div>
+        
+        <div id="post-list" class="grid gap-4"></div>
+    </div>
+
+    <script>
+        async function fetchPosts() {
+            try {
+                const response = await fetch('/api/posts');
+                const result = await response.json();
+                const container = document.getElementById('post-list');
+                document.getElementById('loading').style.display = 'none';
+
+                if (!result.success || result.data.length === 0) {
+                    container.innerHTML = '<p class="text-gray-500 text-center">Belum ada konten.</p>';
+                    return;
+                }
+
+                container.innerHTML = result.data.map(post => `
+                    <div class="bg-white p-5 rounded-xl shadow-sm border border-gray-100 flex justify-between items-start">
+                        <div>
+                            <h2 class="text-xl font-semibold text-gray-800">${post.title}</h2>
+                            <p class="text-xs text-gray-400 mt-1">Oleh: ${post.author || 'Admin'}</p>
+                            <p class="text-gray-600 mt-3 whitespace-pre-line">${post.content}</p>
+                        </div>
+                        <div class="flex gap-2">
+                            <a href="/edit.html?id=${post.id}" class="bg-amber-500 text-white px-3 py-1.5 rounded text-sm hover:bg-amber-600">Edit</a>
+                            <button onclick="deletePost('${post.id}')" class="bg-red-500 text-white px-3 py-1.5 rounded text-sm hover:bg-red-600">Hapus</button>
+                        </div>
+                    </div>
+                `).join('');
+            } catch (err) {
+                console.error(err);
+                document.getElementById('loading').innerText = 'Gagal memuat data dari server.';
+            }
+        }
+
+        async function deletePost(id) {
+            if (!confirm('Yakin ingin menghapus konten ini?')) return;
+            try {
+                const res = await fetch(`/api/posts/${id}`, { method: 'DELETE' });
+                const result = await res.json();
+                if (result.success) {
+                    fetchPosts();
+                } else {
+                    alert('Gagal menghapus: ' + result.error);
+                }
+            } catch (err) {
+                alert('Terjadi kesalahan jaringan.');
+            }
+        }
+
+        fetchPosts();
+    </script>
+</body>
+</html>
