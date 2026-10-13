@@ -31,7 +31,7 @@ app.get('/api/posts', async (req, res) => {
     const snapshot = await db.collection('posts').orderBy('createdAt', 'desc').get();
     const posts = [];
     snapshot.forEach(doc => {
-      posts.id = doc.id, ...doc.data();
+      posts.push({ id: doc.id, ...doc.data() }); // <--- DIPERBAIKI DI SINI (menggunakan .push())
     });
     res.status(200).json({ success: true, data: posts });
   } catch (error) {
@@ -106,4 +106,4 @@ if (process.env.NODE_ENV !== 'production') {
   app.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);
   });
-}
+} // <--- DIPERBAIKI DI SINI (tanda kurung tutup yang benar)
