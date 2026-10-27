@@ -6,6 +6,14 @@
       "destination": "/api/index.js"
     },
     {
+      "source": "/admin",
+      "destination": "/public/admin.html"
+    },
+    {
+      "source": "/post",
+      "destination": "/public/post.html"
+    },
+    {
       "source": "/(.*)",
       "destination": "/public/$1"
     }

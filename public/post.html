@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Detail Konten - Simple CMS</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-50 font-sans">
+    <div class="max-w-3xl mx-auto p-6">
+        <header class="flex justify-between items-center mb-8 border-b pb-4">
+            <a href="/" class="text-2xl font-bold text-gray-800 hover:text-blue-700">Simple CMS</a>
+        </header>
+
+        <div id="loading" class="text-center py-10 text-gray-500">Memuat konten...</div>
+
+        <main id="post-detail" class="hidden bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+            <h1 id="post-title" class="text-2xl font-bold text-gray-800"></h1>
+            <p id="post-meta" class="text-sm text-gray-400 mt-2"></p>
+            <p id="post-content" class="text-gray-700 mt-4 whitespace-pre-line leading-relaxed"></p>
+        </main>
+
+        <div class="mt-6">
+            <a href="/" class="text-blue-600 hover:underline">&larr; Kembali ke beranda</a>
+        </div>
+    </div>
+
+    <script>
+        const postId = new URLSearchParams(window.location.search).get('id');
+
+        async function loadPost() {
+            try {
+                const response = await fetch(`/api/posts/${postId}`);
+                const result = await response.json();
+                document.getElementById('loading').style.display = 'none';
+
+                if (!result.success) {
+                    document.getElementById('post-detail').outerHTML =
+                        '<p class="text-center text-gray-500 py-10">Konten tidak ditemukan.</p>';
+                    return;
+                }
+                const post = result.data;
+                const date = post.createdAt
+                    ? new Date(post.createdAt._seconds ? post.createdAt._seconds * 1000 : post.createdAt).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })
+                    : '';
+                document.getElementById('post-title').innerText = post.title;
+                document.getElementById('post-meta').innerText =
+                    'Oleh: ' + (post.author || 'Admin') + (date ? ' • ' + date : '');
+                document.getElementById('post-content').innerText = post.content;
+                document.getElementById('post-detail').classList.remove('hidden');
+            } catch (err) {
+                console.error(err);
+                document.getElementById('loading').style.display = 'none';
+                document.getElementById('post-detail').outerHTML =
+                    '<p class="text-center text-red-500 py-10">Gagal memuat konten.</p>';
+            }
+        }
+
+        if (postId) loadPost();
+    </script>
+</body>
+</html>
