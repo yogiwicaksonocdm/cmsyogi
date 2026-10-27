@@ -227,8 +227,11 @@ app.delete('/api/posts/:id', requireAdmin, async (req, res) => {
   }
 });
 
-// ===== File statis halaman (berlaku di lokal; di Vercel juga dilayani lewat rewrites) =====
-const PUBLIC_DIR = path.join(__dirname, '..', 'public');
+// ===== File statis halaman (berlaku lokal & Vercel) =====
+// Lokal: ../public dari api/. Di bundle Vercel, cwd = root repo, jadi gunakan cwd() juga.
+const PUBLIC_DIR = fs.existsSync(path.join(__dirname, '..', 'public'))
+  ? path.join(__dirname, '..', 'public')
+  : path.join(process.cwd(), 'public');
 app.use(express.static(PUBLIC_DIR));
 app.get('/admin', (req, res) => res.sendFile(path.join(PUBLIC_DIR, 'admin.html')));
 app.get('/post', (req, res) => res.sendFile(path.join(PUBLIC_DIR, 'post.html')));
