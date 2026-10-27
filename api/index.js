@@ -3,15 +3,40 @@ const cors = require('cors');
 const admin = require('firebase-admin');
 require('dotenv').config();
 
+const fs = require('fs');
+const path = require('path');
+
 // Inisialisasi Firebase Admin
 if (!admin.apps.length) {
   let serviceAccount;
-  
-  // Mendukung kredensial dari Environment Variable (untuk Vercel) atau file lokal
+
   if (process.env.FIREBASE_SERVICE_ACCOUNT) {
+    // Abail 1: JSON service account utuh dari Environment Variable (mis. di Vercel)
     serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
+  } else if (process.env.FIREBASE_PROJECT_ID && process.env.FIREBASE_CLIENT_EMAIL && process.env.FIREBASE_PRIVATE_KEY) {
+    // Abail 2: kredensial terpisah FIREBASE_* dari .env / Vercel
+    serviceAccount = {
+      type: process.env.FIREBASE_TYPE || 'service_account',
+      project_id: process.env.FIREBASE_PROJECT_ID,
+      private_key_id: process.env.FIREBASE_PRIVATE_KEY_ID,
+      // Nilai di .env/Vercel sering memakai "\\n" sebagai pengganti newline
+      private_key: process.env.FIREBASE_PRIVATE_KEY.replace(/\\n/g, '\n'),
+      client_email: process.env.FIREBASE_CLIENT_EMAIL,
+      client_id: process.env.FIREBASE_CLIENT_ID,
+      auth_uri: process.env.FIREBASE_AUTH_URI || 'https://accounts.google.com/o/oauth2/auth',
+      token_uri: process.env.FIREBASE_TOKEN_URI || 'https://oauth2.googleapis.com/token',
+      auth_provider_x509_cert_url: process.env.FIREBASE_AUTH_PROVIDER_X509_CERT_URL,
+      client_x509_cert_url: process.env.FIREBASE_CLIENT_X509_CERT_URL,
+      universe_domain: process.env.FIREBASE_UNIVERSE_DOMAIN || 'googleapis.com'
+    };
   } else {
-    serviceAccount = require('./serviceAccountKey.json'); // Opsional untuk lokal
+    // Abail 3: file service account di project root (lokal)
+    const candidate = path.join(__dirname, '..', 'buatcmsbaru-firebase-adminsdk-fbsvc-e7561914ac.json');
+    if (fs.existsSync(candidate)) {
+      serviceAccount = require(candidate);
+    } else {
+      serviceAccount = require(path.join(__dirname, 'serviceAccountKey.json'));
+    }
   }
 
   admin.initializeApp({
