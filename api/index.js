@@ -227,6 +227,13 @@ app.delete('/api/posts/:id', requireAdmin, async (req, res) => {
   }
 });
 
+// ===== File statis halaman (berlaku di lokal; di Vercel juga dilayani lewat rewrites) =====
+const PUBLIC_DIR = path.join(__dirname, '..', 'public');
+app.use(express.static(PUBLIC_DIR));
+app.get('/admin', (req, res) => res.sendFile(path.join(PUBLIC_DIR, 'admin.html')));
+app.get('/post', (req, res) => res.sendFile(path.join(PUBLIC_DIR, 'post.html')));
+app.get('/', (req, res) => res.sendFile(path.join(PUBLIC_DIR, 'index.html')));
+
 // Export untuk Vercel Serverless
 module.exports = app;
 
