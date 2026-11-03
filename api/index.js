@@ -22,10 +22,6 @@ if (!admin.apps.length) {
 const db = admin.firestore();
 const app = express();
 
-// === Konfigurasi AI (auto generated content) ===
-const AI_BASE_URL = process.env.AI_BASE_URL || 'https://freebuff.com/api/v1/paid';
-const AI_MODEL = process.env.AI_MODEL || 'gpt-4o-mini';
-
 app.use(cors());
 app.use(express.json());
 
@@ -57,54 +53,29 @@ app.get('/api/posts/:id', async (req, res) => {
   }
 });
 
-// 6. POST: Generate draf konten otomatis dengan AI (OPENAI_API_KEY milik owner, tidak pernah ke browser)
-app.post('/api/generate', async (req, res) => {
+// 6. POST: Generate draf konten otomatis — 100% lokal dari judul, tanpa API key atau layanan eksternal
+
+function buatDrafLokal(judul) {
+  const j = judul.trim();
+  const today = new Intl.DateTimeFormat('id-ID', { day: 'numeric', month: 'long', year: 'numeric' }).format(new Date());
+  return [
+    `${j} bukan sekadar topik lewat; ia menyentuh keseharian. Mulailah tulisan ini dengan satu pengalaman, data, atau kejadian nyata yang Anda saksikan sendiri — satu kalimat konkret lebih mengikat daripada sepuluh kalimat umum.`,
+    `Tiga hal yang sebaiknya dibahas lebih dalam:\n• Mengapa ${j} penting saat ini — beri latar belakang singkat yang dipahami siapa pun.\n• Dampak atau manfaatnya — tampilkan contoh nyata, angka, atau pengalaman agar terasa hidup.\n• Langkah praktis untuk pembaca — tulis dua sampai tiga tindakan sederhana yang bisa langsung dicoba.`,
+    `Kembangkan poin-poin di atas dengan bahasa yang hangat, seolah berbicara kepada pembaca terdekat. Sisipkan kutipan atau pendapat tokoh bila perlu — sesuai semangat Abzah CMS: "Membaca dan Menulis adalah Nutrisi Otak".`,
+    `Abzah CMS — ${today}. Tutup dengan ajakan bertindak: apa satu hal kecil yang ingin Anda lakukan pembaca setelah membaca tulisan ini?`
+  ].join('\n\n');
+}
+
+app.post('/api/generate', (req, res) => {
   const { title } = req.body || {};
   if (!title || !title.trim()) {
     return res.status(400).json({ success: false, error: 'Isi judul dulu sebelum generate konten otomatis' });
   }
-  const apiKey = process.env.OPENAI_API_KEY;
-  if (!apiKey) {
-    return res.status(503).json({
-      success: false,
-      error: 'OPENAI_API_KEY belum diatur. Owner dapat membuat dan mengisi key di freebuff.com/account/api (Local: file .env / Vercel: Environment Variables).'
-    });
-  }
-  try {
-    const prompt = [
-      'Tulis draf konten artikel berbahasa Indonesia yang mengalir dan menarik untuk CMS "Abzah CMS".',
-      `Judul: "${title.trim()}".`,
-      'Gaya: informatif, hangat, seperti berbagi gagasan.',
-      'Aturan: 3-4 paragraf polos (tanpa heading Markdown, tanpa tanda -*-), langsung isi konten saja tanpa pembuka seperti "Berikut draf".'
-    ].join(' ');
-    const response = await fetch(`${AI_BASE_URL}/chat/completions`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${apiKey}`
-      },
-      body: JSON.stringify({
-        model: AI_MODEL,
-        messages: [{ role: 'user', content: prompt }],
-        max_tokens: 700,
-        temperature: 0.8
-      })
-    });
-    if (!response.ok) {
-      const detail = await response.text().catch(() => '');
-      console.error('AI API error', response.status, detail);
-      return res.status(502).json({ success: false, error: `AI API merespons ${response.status}. Cek kunci OPENAI_API_KEY dan model (${AI_MODEL}).` });
-    }
-    const data = await response.json();
-    const content = data?.choices?.[0]?.message?.content?.trim();
-    if (!content) {
-      return res.status(502).json({ success: false, error: 'AI tidak menghasilkan konten. Coba lagi.' });
-    }
-    res.status(200).json({ success: true, content });
-  } catch (error) {
-    console.error('Generator error:', error);
-    res.status(500).json({ success: false, error: `Gagal generate konten: ${error.message}` });
-  }
+  res.status(200).json({
+    success: true,
+    content: buatDrafLokal(title),
+    message: 'Draf kerangka dibuat secara lokal. Silakan sunting dengan isi Anda sebelum menyimpan.'
+  });
 });
 
 // 3. POST: Tambah artikel baru
