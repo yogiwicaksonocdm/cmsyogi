@@ -30,7 +30,7 @@
                         <span id="generate-icon" aria-hidden="true">✨</span><span id="generate-label">Generate otomatis</span>
                     </button>
                 </div>
-                <textarea id="content" rows="6" required class="w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:outline-none" placeholder="Klik “Generate otomatis” setelah mengisi judul, atau tulis sendiri di sini..."></textarea>
+                <textarea id="content" rows="6" required class="w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:outline-none" placeholder="Klik “Generate otomatis” untuk membuat kerangka draf dari judul, atau tulis sendiri di sini..."></textarea>
             </div>
             <button type="submit" id="submit-btn" class="w-full bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 transition">Simpan Konten</button>
         </form>
@@ -70,6 +70,9 @@
             if (!title) {
                 alert('Isi “Judul” dulu, lalu klik Generate otomatis.');
                 document.getElementById('title').focus();
+                return;
+            }
+            if (document.getElementById('content').value.trim() && !confirm('Konten sudah terisi. Generate akan menimpa isi yang ada. Lanjutkan?')) {
                 return;
             }
             generateBtn.disabled = true;
