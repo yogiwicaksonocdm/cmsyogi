@@ -3,62 +3,102 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Beranda - Simple CMS</title>
+    <title>Abzah CMS — Dashboard</title>
     <script src="https://cdn.tailwindcss.com"></script>
 </head>
-<body class="bg-gray-50 font-sans">
-    <div class="max-w-3xl mx-auto p-6">
-        <header class="flex justify-between items-center mb-8 border-b pb-4">
-            <a href="/" class="text-2xl font-bold text-gray-800 hover:text-blue-700">Simple CMS</a>
-            <a href="/admin" class="text-sm text-gray-500 hover:text-blue-600 transition">Login Admin</a>
+<body class="bg-[#f6f5ef] font-sans text-[#202b28]">
+    <div class="max-w-6xl mx-auto px-5 py-6 sm:px-8">
+        <header class="flex justify-between items-center mb-8 border-b border-[#d9ddd5] pb-4">
+            <div class="flex items-center gap-3">
+                <span aria-hidden="true" class="flex h-10 w-10 items-center justify-center rounded-lg bg-[#315b4c] font-serif text-xl font-bold text-white">A</span>
+                <div>
+                    <h1 class="text-2xl font-bold text-gray-800">Abzah CMS</h1>
+                    <p class="text-xs text-[#718078]">Dashboard Manajemen Konten</p>
+                </div>
+            </div>
+            <a href="/edit.html" class="bg-[#315b4c] text-white px-4 py-2 rounded-md hover:bg-[#244638] transition">+ Tambah Konten</a>
         </header>
 
+        <section class="grid grid-cols-[minmax(0,1fr)_minmax(96px,0.42fr)] items-center gap-3 overflow-hidden rounded-md bg-[#e7ede5] sm:gap-6 md:grid-cols-[1fr_1.05fr] md:gap-10" aria-labelledby="hero-title">
+            <div class="py-7 pl-5 pr-1 sm:px-8 md:py-12 lg:px-14">
+                <p class="mb-4 text-xs font-bold uppercase text-[#557263]">Ruang publikasi · Abzah CMS</p>
+                <h2 id="hero-title" class="max-w-xl font-serif text-3xl leading-tight text-[#20372f] sm:text-4xl md:text-5xl">Cerita baik layak mendapat ruang.</h2>
+                <p class="mt-3 font-serif text-lg italic text-[#315b4c] sm:text-xl">“Membaca dan Menulis adalah Nutrisi Otak”</p>
+                <p class="mt-4 max-w-md text-sm leading-6 text-[#56645d] sm:text-base sm:leading-7">Kelola kabar, gagasan, dan pembaruan terbaru dalam satu tempat.</p>
+                <div class="mt-5 flex flex-wrap items-center gap-x-4 gap-y-3 sm:mt-7">
+                    <a href="/edit.html" class="rounded-md bg-[#315b4c] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[#244638]">Tulis konten <span aria-hidden="true">↗</span></a>
+                    <a href="#post-list" class="text-sm font-semibold text-[#315b4c] underline decoration-[#9eafa3] underline-offset-4 hover:text-[#20372f]">Jelajahi konten</a>
+                </div>
+            </div>
+            <div class="relative h-full min-h-[320px] md:min-h-[390px]">
+                <img class="h-full w-full object-cover" src="https://images.unsplash.com/photo-1497366754035-f200968a6e72?auto=format&fit=crop&w=1400&q=85" alt="Ruang kerja terang dengan meja dan tanaman" fetchpriority="high">
+                <figure class="absolute bottom-6 left-4 hidden w-32 rotate-[-4deg] overflow-hidden rounded-lg border-4 border-white shadow-lg sm:block md:w-40 lg:w-48">
+                    <img class="aspect-[4/5] w-full object-cover" src="https://images.unsplash.com/photo-1456513080510-7bf3a84b82f8?auto=format&fit=crop&w=500&q=80" alt="Buku terbuka di bawah sinar matahari" loading="lazy">
+                </figure>
+                <figure class="absolute right-4 top-6 hidden w-28 rotate-[3deg] overflow-hidden rounded-lg border-4 border-white shadow-lg sm:block md:w-32 lg:w-36">
+                    <img class="aspect-square w-full object-cover" src="https://images.unsplash.com/photo-1455390582262-044cdead277b?auto=format&fit=crop&w=500&q=80" alt="Menulis dengan pena di atas kertas" loading="lazy">
+                </figure>
+                <figure class="absolute bottom-6 right-4 hidden h-14 w-24 rotate-[6deg] overflow-hidden rounded-lg border-4 border-white shadow-lg md:block lg:w-28">
+                    <img class="h-full w-full object-cover" src="https://images.unsplash.com/photo-1519682577862-22b62b24e493?auto=format&fit=crop&w=500&q=80" alt="Rak buku penuh koleksi buku" loading="lazy">
+                </figure>
+            </div>
+        </section>
+
+        <div class="mb-5 mt-10 flex items-end justify-between gap-4">
+            <div>
+                <p class="text-xs font-bold uppercase text-[#718078]">Terbaru</p>
+                <h2 class="mt-1 font-serif text-2xl text-[#20372f]">Konten pilihan</h2>
+            </div>
+        </div>
         <div id="loading" class="text-center py-10 text-gray-500">Memuat data...</div>
-
-        <main id="post-list" class="grid gap-4"></main>
-
-        <footer class="mt-10 pt-4 border-t text-xs text-gray-400 text-center">
-            Area pengelolaan konten tersedia di <a href="/admin" class="text-blue-500 hover:underline">halaman admin</a>.
-        </footer>
+        
+        <div id="post-list" class="grid gap-4"></div>
     </div>
 
     <script>
-        function renderPost(post) {
-            const date = post.createdAt
-                ? new Date(post.createdAt._seconds ? post.createdAt._seconds * 1000 : post.createdAt).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })
-                : '';
-            return `
-                <article class="bg-white p-5 rounded-xl shadow-sm border border-gray-100">
-                    <a href="/post.html?id=${post.id}" class="block">
-                        <h2 class="text-xl font-semibold text-gray-800 hover:text-blue-700 transition">${post.title}</h2>
-                        <p class="text-xs text-gray-400 mt-1">
-                            Oleh: ${post.author || 'Admin'}${date ? ' &bull; ' + date : ''}
-                        </p>
-                        <p class="text-gray-600 mt-3 line-clamp-3">${post.content}</p>
-                        <p class="text-blue-600 text-sm mt-3">Baca selengkapnya &rarr;</p>
-                    </a>
-                </article>
-            `;
-        }
-
         async function fetchPosts() {
             try {
                 const response = await fetch('/api/posts');
                 const result = await response.json();
-                document.getElementById('loading').style.display = 'none';
                 const container = document.getElementById('post-list');
+                document.getElementById('loading').style.display = 'none';
 
-                if (!result.success) throw new Error(result.error);
-                if (result.data.length === 0) {
-                    container.innerHTML = '<p class="text-gray-500 text-center py-6">Belum ada konten yang dipublish.</p>';
+                if (!result.success || result.data.length === 0) {
+                    container.innerHTML = '<p class="text-gray-500 text-center">Belum ada konten.</p>';
                     return;
                 }
-                container.innerHTML = result.data.map(renderPost).join('');
+
+                container.innerHTML = result.data.map(post => `
+                    <div class="bg-white p-5 rounded-xl shadow-sm border border-gray-100 flex justify-between items-start">
+                        <div>
+                            <h2 class="text-xl font-semibold text-gray-800">${post.title}</h2>
+                            <p class="text-xs text-gray-400 mt-1">Oleh: ${post.author || 'Admin'}</p>
+                            <p class="text-gray-600 mt-3 whitespace-pre-line">${post.content}</p>
+                        </div>
+                        <div class="flex gap-2">
+                            <a href="/edit.html?id=${post.id}" class="bg-amber-500 text-white px-3 py-1.5 rounded text-sm hover:bg-amber-600">Edit</a>
+                            <button onclick="deletePost('${post.id}')" class="bg-red-500 text-white px-3 py-1.5 rounded text-sm hover:bg-red-600">Hapus</button>
+                        </div>
+                    </div>
+                `).join('');
             } catch (err) {
                 console.error(err);
-                document.getElementById('loading').style.display = 'none';
-                document.getElementById('post-list').innerHTML =
-                    '<p class="text-red-500 text-center py-6">Gagal memuat data dari server.</p>';
+                document.getElementById('loading').innerText = 'Gagal memuat data dari server.';
+            }
+        }
+
+        async function deletePost(id) {
+            if (!confirm('Yakin ingin menghapus konten ini?')) return;
+            try {
+                const res = await fetch(`/api/posts/${id}`, { method: 'DELETE' });
+                const result = await res.json();
+                if (result.success) {
+                    fetchPosts();
+                } else {
+                    alert('Gagal menghapus: ' + result.error);
+                }
+            } catch (err) {
+                alert('Terjadi kesalahan jaringan.');
             }
         }
 
