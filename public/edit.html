@@ -24,8 +24,13 @@
                 <input type="text" id="author" class="w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:outline-none" value="Admin">
             </div>
             <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">Konten</label>
-                <textarea id="content" rows="6" required class="w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:outline-none"></textarea>
+                <div class="flex items-center justify-between mb-1">
+                    <label class="block text-sm font-medium text-gray-700">Konten</label>
+                    <button type="button" id="generate-btn" class="flex items-center gap-1.5 text-sm font-semibold text-[#315b4c] hover:text-[#20372f] transition disabled:opacity-50 disabled:cursor-not-allowed">
+                        <span id="generate-icon" aria-hidden="true">✨</span><span id="generate-label">Generate otomatis</span>
+                    </button>
+                </div>
+                <textarea id="content" rows="6" required class="w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:outline-none" placeholder="Klik “Generate otomatis” setelah mengisi judul, atau tulis sendiri di sini..."></textarea>
             </div>
             <button type="submit" id="submit-btn" class="w-full bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 transition">Simpan Konten</button>
         </form>
@@ -56,8 +61,42 @@
             }
         }
 
-        document.getElementById('cms-form').addEventListener('submit', async (e) => {
-            e.preventDefault();
+        const generateBtn = document.getElementById('generate-btn');
+        const generateIcon = document.getElementById('generate-icon');
+        const generateLabel = document.getElementById('generate-label');
+
+        generateBtn.addEventListener('click', async () => {
+            const title = document.getElementById('title').value.trim();
+            if (!title) {
+                alert('Isi “Judul” dulu, lalu klik Generate otomatis.');
+                document.getElementById('title').focus();
+                return;
+            }
+            generateBtn.disabled = true;
+            generateIcon.classList.add('animate-spin');
+            generateLabel.innerText = 'Membuat draf...';
+            try {
+                const res = await fetch('/api/generate', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ title })
+                });
+                const result = await res.json();
+                if (result.success && result.content) {
+                    document.getElementById('content').value = result.content;
+                } else {
+                    alert(result.error || 'Gagal generate konten.');
+                }
+            } catch (err) {
+                alert('Terjadi kesalahan jaringan saat generate konten.');
+            } finally {
+                generateBtn.disabled = false;
+                generateIcon.classList.remove('animate-spin');
+                generateLabel.innerText = 'Generate otomatis';
+            }
+        });
+
+        document.getElementById('cms-form').addEventListener('submit', async (e) => {            e.preventDefault();
             const id = document.getElementById('post-id').value;
             const title = document.getElementById('title').value;
             const author = document.getElementById('author').value;
