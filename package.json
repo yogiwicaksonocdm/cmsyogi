@@ -1,7 +1,7 @@
 {
-  "name": "simple-cms-firebase",
+  "name": "abzah-cms-firebase",
   "version": "1.0.0",
-  "description": "Simple CMS with Node.js, Express, Firestore, and Vercel",
+  "description": "Abzah CMS — content management with Node.js, Express, Firestore, and Vercel",
   "main": "api/index.js",
   "scripts": {
     "start": "node api/index.js"
