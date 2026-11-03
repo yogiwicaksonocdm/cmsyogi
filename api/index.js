@@ -1,43 +1,17 @@
 const express = require('express');
 const cors = require('cors');
-const crypto = require('crypto');
 const admin = require('firebase-admin');
 require('dotenv').config();
-
-const fs = require('fs');
-const path = require('path');
 
 // Inisialisasi Firebase Admin
 if (!admin.apps.length) {
   let serviceAccount;
-
+  
+  // Mendukung kredensial dari Environment Variable (untuk Vercel) atau file lokal
   if (process.env.FIREBASE_SERVICE_ACCOUNT) {
-    // Jalur 1: JSON service account utuh dari Environment Variable (mis. di Vercel)
     serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
-  } else if (process.env.FIREBASE_PROJECT_ID && process.env.FIREBASE_CLIENT_EMAIL && process.env.FIREBASE_PRIVATE_KEY) {
-    // Jalur 2: kredensial terpisah FIREBASE_* dari .env / Vercel
-    serviceAccount = {
-      type: process.env.FIREBASE_TYPE || 'service_account',
-      project_id: process.env.FIREBASE_PROJECT_ID,
-      private_key_id: process.env.FIREBASE_PRIVATE_KEY_ID,
-      // Nilai di .env/Vercel sering memakai "\n" sebagai pengganti newline
-      private_key: process.env.FIREBASE_PRIVATE_KEY.replace(/\\n/g, '\n'),
-      client_email: process.env.FIREBASE_CLIENT_EMAIL,
-      client_id: process.env.FIREBASE_CLIENT_ID,
-      auth_uri: process.env.FIREBASE_AUTH_URI || 'https://accounts.google.com/o/oauth2/auth',
-      token_uri: process.env.FIREBASE_TOKEN_URI || 'https://oauth2.googleapis.com/token',
-      auth_provider_x509_cert_url: process.env.FIREBASE_AUTH_PROVIDER_X509_CERT_URL,
-      client_x509_cert_url: process.env.FIREBASE_CLIENT_X509_CERT_URL,
-      universe_domain: process.env.FIREBASE_UNIVERSE_DOMAIN || 'googleapis.com'
-    };
   } else {
-    // Jalur 3: file service account di project root (lokal)
-    const candidate = path.join(__dirname, '..', 'buatcmsbaru-firebase-adminsdk-fbsvc-e7561914ac.json');
-    if (fs.existsSync(candidate)) {
-      serviceAccount = require(candidate);
-    } else {
-      serviceAccount = require(path.join(__dirname, 'serviceAccountKey.json'));
-    }
+    serviceAccount = require('./serviceAccountKey.json'); // Opsional untuk lokal
   }
 
   admin.initializeApp({
@@ -48,78 +22,20 @@ if (!admin.apps.length) {
 const db = admin.firestore();
 const app = express();
 
+// === Konfigurasi AI (auto generated content) ===
+const AI_BASE_URL = process.env.AI_BASE_URL || 'https://freebuff.com/api/v1/paid';
+const AI_MODEL = process.env.AI_MODEL || 'gpt-4o-mini';
+
 app.use(cors());
 app.use(express.json());
 
-// ===== Autentikasi Admin =====
-const SESSION_TTL_MS = 12 * 60 * 60 * 1000; // 12 jam
-const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'admin123';
-if (!process.env.ADMIN_PASSWORD) {
-  console.warn('PERINGATAN: ADMIN_PASSWORD tidak diatur, memakai password default "admin123". Set ADMIN_PASSWORD di env!');
-}
-const SESSION_SECRET = process.env.ADMIN_SESSION_SECRET || `cms-secret::${ADMIN_PASSWORD}`;
-
-function sign(value) {
-  return crypto.createHmac('sha256', SESSION_SECRET).update(String(value)).digest('hex');
-}
-
-function createToken() {
-  const exp = Date.now() + SESSION_TTL_MS;
-  return `${exp}.${sign(exp)}`;
-}
-
-function isValidToken(token) {
-  if (!token || typeof token !== 'string') return false;
-  const parts = token.split('.');
-  if (parts.length !== 2) return false;
-  const [exp, sig] = parts;
-  if (!/^\d+$/.test(exp)) return false;
-  if (Number(exp) < Date.now()) return false;
-  const expected = sign(exp);
-  const a = Buffer.from(sig);
-  const b = Buffer.from(expected);
-  if (a.length !== b.length) return false;
-  return crypto.timingSafeEqual(a, b);
-}
-
-function requireAdmin(req, res, next) {
-  const header = req.get('authorization') || '';
-  const token = header.startsWith('Bearer ') ? header.slice(7).trim() : (req.get('x-admin-token') || '');
-  if (!isValidToken(token)) {
-    return res.status(401).json({ success: false, message: 'Tidak diizinkan. Silakan login sebagai admin.' });
-  }
-  next();
-}
-
-// ===== AUTH =====
-app.post('/api/admin/login', async (req, res) => {
-  const { password } = req.body || {};
-  if (!password || password !== ADMIN_PASSWORD) {
-    return res.status(401).json({ success: false, message: 'Password salah' });
-  }
-  res.status(200).json({ success: true, token: createToken(), expiresInMs: SESSION_TTL_MS });
-});
-
-app.get('/api/admin/check', (req, res) => {
-  const header = req.get('authorization') || '';
-  const token = header.startsWith('Bearer ') ? header.slice(7).trim() : '';
-  if (!isValidToken(token)) {
-    return res.status(401).json({ success: false, message: 'Sesi tidak valid' });
-  }
-  res.status(200).json({ success: true });
-});
-
-// ===== PUBLIK: hanya konten yang dipublish =====
-
-// 1. GET: Daftar konten (hanya published)
+// 1. GET: Ambil semua artikel/konten
 app.get('/api/posts', async (req, res) => {
   try {
     const snapshot = await db.collection('posts').orderBy('createdAt', 'desc').get();
     const posts = [];
     snapshot.forEach(doc => {
-      const data = doc.data();
-      if (data.status && data.status !== 'published') return; // draft disembunyikan dari publik
-      posts.push({ id: doc.id, ...data });
+      posts.push({ id: doc.id, ...doc.data() }); // <--- DIPERBAIKI DI SINI (menggunakan .push())
     });
     res.status(200).json({ success: true, data: posts });
   } catch (error) {
@@ -127,41 +43,11 @@ app.get('/api/posts', async (req, res) => {
   }
 });
 
-// 2. GET: Detail konten publik (hanya published)
+// 2. GET: Ambil detail artikel berdasarkan ID
 app.get('/api/posts/:id', async (req, res) => {
   try {
-    const doc = await db.collection('posts').doc(req.params.id).get();
-    if (!doc.exists) {
-      return res.status(404).json({ success: false, message: 'Konten tidak ditemukan' });
-    }
-    const data = doc.data();
-    if (data.status && data.status !== 'published') {
-      return res.status(404).json({ success: false, message: 'Konten tidak ditemukan' });
-    }
-    res.status(200).json({ success: true, data: { id: doc.id, ...data } });
-  } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
-  }
-});
-
-// ===== ADMIN: konten semua status + semua operasi tulis (proteksi token) =====
-
-// 3. GET admin: daftar semua konten, termasuk draft
-app.get('/api/admin/posts', requireAdmin, async (req, res) => {
-  try {
-    const snapshot = await db.collection('posts').orderBy('createdAt', 'desc').get();
-    const posts = [];
-    snapshot.forEach(doc => posts.push({ id: doc.id, ...doc.data() }));
-    res.status(200).json({ success: true, data: posts });
-  } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
-  }
-});
-
-// 4. GET admin: detail konten apa pun statusnya (untuk form edit)
-app.get('/api/admin/posts/:id', requireAdmin, async (req, res) => {
-  try {
-    const doc = await db.collection('posts').doc(req.params.id).get();
+    const docRef = db.collection('posts').doc(req.params.id);
+    const doc = await docRef.get();
     if (!doc.exists) {
       return res.status(404).json({ success: false, message: 'Konten tidak ditemukan' });
     }
@@ -171,18 +57,64 @@ app.get('/api/admin/posts/:id', requireAdmin, async (req, res) => {
   }
 });
 
-// 5. POST: Tambah konten baru (admin)
-app.post('/api/posts', requireAdmin, async (req, res) => {
+// 6. POST: Generate draf konten otomatis dengan AI (OPENAI_API_KEY milik owner, tidak pernah ke browser)
+app.post('/api/generate', async (req, res) => {
+  const { title } = req.body || {};
+  if (!title || !title.trim()) {
+    return res.status(400).json({ success: false, error: 'Isi judul dulu sebelum generate konten otomatis' });
+  }
+  const apiKey = process.env.OPENAI_API_KEY;
+  if (!apiKey) {
+    return res.status(503).json({
+      success: false,
+      error: 'OPENAI_API_KEY belum diatur. Owner dapat membuat dan mengisi key di freebuff.com/account/api (Local: file .env / Vercel: Environment Variables).'
+    });
+  }
   try {
-    const { title, content, author, status } = req.body;
-    if (!title || !content) {
-      return res.status(400).json({ success: false, message: 'Judul dan konten wajib diisi' });
+    const prompt = [
+      'Tulis draf konten artikel berbahasa Indonesia yang mengalir dan menarik untuk CMS "Abzah CMS".',
+      `Judul: "${title.trim()}".`,
+      'Gaya: informatif, hangat, seperti berbagi gagasan.',
+      'Aturan: 3-4 paragraf polos (tanpa heading Markdown, tanpa tanda -*-), langsung isi konten saja tanpa pembuka seperti "Berikut draf".'
+    ].join(' ');
+    const response = await fetch(`${AI_BASE_URL}/chat/completions`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${apiKey}`
+      },
+      body: JSON.stringify({
+        model: AI_MODEL,
+        messages: [{ role: 'user', content: prompt }],
+        max_tokens: 700,
+        temperature: 0.8
+      })
+    });
+    if (!response.ok) {
+      const detail = await response.text().catch(() => '');
+      console.error('AI API error', response.status, detail);
+      return res.status(502).json({ success: false, error: `AI API merespons ${response.status}. Cek kunci OPENAI_API_KEY dan model (${AI_MODEL}).` });
     }
+    const data = await response.json();
+    const content = data?.choices?.[0]?.message?.content?.trim();
+    if (!content) {
+      return res.status(502).json({ success: false, error: 'AI tidak menghasilkan konten. Coba lagi.' });
+    }
+    res.status(200).json({ success: true, content });
+  } catch (error) {
+    console.error('Generator error:', error);
+    res.status(500).json({ success: false, error: `Gagal generate konten: ${error.message}` });
+  }
+});
+
+// 3. POST: Tambah artikel baru
+app.post('/api/posts', async (req, res) => {
+  try {
+    const { title, content, author } = req.body;
     const newPost = {
       title,
       content,
       author: author || 'Admin',
-      status: status === 'draft' ? 'draft' : 'published',
       createdAt: admin.firestore.FieldValue.serverTimestamp()
     };
     const docRef = await db.collection('posts').add(newPost);
@@ -192,23 +124,15 @@ app.post('/api/posts', requireAdmin, async (req, res) => {
   }
 });
 
-// 6. PUT: Update konten (admin), termasuk ganti status publish/draft
-app.put('/api/posts/:id', requireAdmin, async (req, res) => {
+// 4. PUT: Update artikel
+app.put('/api/posts/:id', async (req, res) => {
   try {
-    const { title, content, author, status } = req.body;
-    if (!title || !content) {
-      return res.status(400).json({ success: false, message: 'Judul dan konten wajib diisi' });
-    }
+    const { title, content, author } = req.body;
     const docRef = db.collection('posts').doc(req.params.id);
-    const doc = await docRef.get();
-    if (!doc.exists) {
-      return res.status(404).json({ success: false, message: 'Konten tidak ditemukan' });
-    }
     await docRef.update({
       title,
       content,
-      author: author || 'Admin',
-      status: status === 'draft' ? 'draft' : 'published',
+      author,
       updatedAt: admin.firestore.FieldValue.serverTimestamp()
     });
     res.status(200).json({ success: true, message: 'Konten berhasil diperbarui' });
@@ -217,8 +141,8 @@ app.put('/api/posts/:id', requireAdmin, async (req, res) => {
   }
 });
 
-// 7. DELETE: Hapus konten (admin)
-app.delete('/api/posts/:id', requireAdmin, async (req, res) => {
+// 5. DELETE: Hapus artikel
+app.delete('/api/posts/:id', async (req, res) => {
   try {
     await db.collection('posts').doc(req.params.id).delete();
     res.status(200).json({ success: true, message: 'Konten berhasil dihapus' });
@@ -226,16 +150,6 @@ app.delete('/api/posts/:id', requireAdmin, async (req, res) => {
     res.status(500).json({ success: false, error: error.message });
   }
 });
-
-// ===== File statis halaman (berlaku lokal & Vercel) =====
-// Lokal: ../public dari api/. Di bundle Vercel, cwd = root repo, jadi gunakan cwd() juga.
-const PUBLIC_DIR = fs.existsSync(path.join(__dirname, '..', 'public'))
-  ? path.join(__dirname, '..', 'public')
-  : path.join(process.cwd(), 'public');
-app.use(express.static(PUBLIC_DIR));
-app.get('/admin', (req, res) => res.sendFile(path.join(PUBLIC_DIR, 'admin.html')));
-app.get('/post', (req, res) => res.sendFile(path.join(PUBLIC_DIR, 'post.html')));
-app.get('/', (req, res) => res.sendFile(path.join(PUBLIC_DIR, 'index.html')));
 
 // Export untuk Vercel Serverless
 module.exports = app;
@@ -246,4 +160,4 @@ if (process.env.NODE_ENV !== 'production') {
   app.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);
   });
-}
+} // <--- DIPERBAIKI DI SINI (tanda kurung tutup yang benar)
