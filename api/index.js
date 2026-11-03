@@ -3,19 +3,34 @@ const cors = require('cors');
 const admin = require('firebase-admin');
 require('dotenv').config();
 
-// Inisialisasi Firebase Admin
+// Inisialisasi Firebase Admin dari env: FIREBASE_PROJECT_ID, FIREBASE_CLIENT_EMAIL, FIREBASE_PRIVATE_KEY
 if (!admin.apps.length) {
-  let serviceAccount;
-  
-  // Mendukung kredensial dari Environment Variable (untuk Vercel) atau file lokal
-  if (process.env.FIREBASE_SERVICE_ACCOUNT) {
-    serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
-  } else {
-    serviceAccount = require('./serviceAccountKey.json'); // Opsional untuk lokal
+  const projectId = process.env.FIREBASE_PROJECT_ID;
+  const clientEmail = process.env.FIREBASE_CLIENT_EMAIL;
+  const privateKey = process.env.FIREBASE_PRIVATE_KEY;
+
+  const belumAda = [
+    ['FIREBASE_PROJECT_ID', projectId],
+    ['FIREBASE_CLIENT_EMAIL', clientEmail],
+    ['FIREBASE_PRIVATE_KEY', privateKey]
+  ]
+    .filter(([, val]) => !val)
+    .map(([k]) => k);
+
+  if (belumAda.length) {
+    throw new Error(
+      `Variabel lingkungan Firebase belum lengkap: ${belumAda.join(', ')}. ` +
+        'Isi di file .env (lokal) atau Environment Variables Vercel (isi private key Persis seperti dari JSON, gunakan tanda kutip): contoh FIREBASE_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\nMIIE...\n-----END PRIVATE KEY-----\n".'
+    );
   }
 
   admin.initializeApp({
-    credential: admin.credential.cert(serviceAccount)
+    credential: admin.credential.cert({
+      projectId,
+      clientEmail,
+      // Saat disimpan di .env/Vercel, baris baru private key biasanya jadi "\n" literal — kembalikan ke newline asli
+      privateKey: privateKey.replace(/\\n/g, '\n')
+    })
   });
 }
 
